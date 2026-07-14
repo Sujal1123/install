@@ -1,9 +1,19 @@
-# install.ps1
+# =================================================================
+# 🛡️ Core Administrator Auto-Elevation Hook
+# =================================================================
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Write-Host "⚠️ Elevation required. Relaunching installer with Administrative Privileges..." -ForegroundColor Yellow
+    # Captures the original script parameter context string variables and runs a fresh elevated shell instance
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& { $MyInvocation.Line }`"" -Verb RunAs
+    Exit
+}
+
 param (
     [Parameter(Mandatory=$true)]
     [string]$Token,
     
-    [string]$OrchestratorUrl = "wss://your-render-app-name.onrender.com" # Replace with your live Render WSS URL
+    [string]$OrchestratorUrl = "wss://stratus-p2p-core.onrender.com" # 🎯 Synchronized directly to your Render live backend
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,7 +60,7 @@ Write-Host "✅ Network routing configurations deployed successfully." -Foregrou
 Write-Host "[4/5] Pulling down the latest secure network grid runner daemon..." -ForegroundColor Yellow
 $BinaryPath = Join-Path $InstallDir "provider.exe"
 
-# NOTE: Replace this mock URL string layout path with your actual public GitHub releases binary build payload download path!
+# 🎯 Target download endpoint mapped cleanly to your profile release channel
 $DownloadUrl = "https://github.com/Sujal1123/install/releases/latest/download/provider.exe"
 
 try {
@@ -95,5 +105,5 @@ try {
     Write-Host "System tray console terminals can be safely closed. Earning active." -ForegroundColor Green
     Write-Host "=================================================================" -ForegroundColor Green
 } catch {
-    Write-Host "❌ CRITICAL ERROR: Background service creation failed. Ensure you are running terminal as Admin." -ForegroundColor Red
+    Write-Host "❌ CRITICAL ERROR: Background service creation failed. Ensure administrative privileges are bound." -ForegroundColor Red
 }

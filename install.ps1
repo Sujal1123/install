@@ -51,7 +51,7 @@ Write-Host "[4/5] Pulling down the latest secure network grid runner daemon..." 
 $BinaryPath = Join-Path $InstallDir "provider.exe"
 
 # NOTE: Replace this mock URL string layout path with your actual public GitHub releases binary build payload download path!
-$DownloadUrl = "https://github.com/your-username/your-repo/releases/latest/download/provider.exe"
+$DownloadUrl = "https://github.com/Sujal1123/install/releases/latest/download/provider.exe"
 
 try {
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $BinaryPath -UseBasicParsing

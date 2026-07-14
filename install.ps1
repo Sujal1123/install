@@ -5,6 +5,13 @@ param (
     [string]$OrchestratorUrl = "wss://stratus-p2p-core.onrender.com"
 )
 
+# Force the window to stay open if a fatal crash happens
+trap {
+    Write-Host "`n❌ CRITICAL CRASH: $($_.Exception.Message)" -ForegroundColor Red
+    Read-Host "Script halted. Press Enter to close this window"
+    Exit
+}
+
 $ErrorActionPreference = "Stop"
 
 Write-Host "=================================================================" -ForegroundColor Cyan
@@ -15,6 +22,7 @@ Write-Host "=================================================================" -
 Write-Host "[1/5] Validating local container environment dependencies..." -ForegroundColor Yellow
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Write-Host "❌ ERROR: Docker Engine / Docker Desktop was not found on this system." -ForegroundColor Red
+    Read-Host "Press Enter to exit"
     Exit
 }
 
@@ -23,6 +31,7 @@ try {
     Write-Host "✅ Docker engine is alive and verified responsive." -ForegroundColor Green
 } catch {
     Write-Host "❌ ERROR: Docker Desktop is installed but not running. Please open Docker Desktop first." -ForegroundColor Red
+    Read-Host "Press Enter to exit"
     Exit
 }
 
@@ -36,7 +45,7 @@ if (-not (Test-Path $InstallDir)) {
 # 3. Dynamically Generate config.json Layout Environment
 Write-Host "[3/5] Injecting cryptographic grid access tokens..." -ForegroundColor Yellow
 $ConfigObject = @{
-    CORE_ORCHESTRATOR_URL = $OrchestratorUrl
+    CORE_ORCHESTRATOR_URL = $OrchestrUrl
     ACCESS_TOKEN          = $Token
 }
 $ConfigPath = Join-Path $InstallDir "config.json"
@@ -58,6 +67,7 @@ try {
         Write-Host "✅ Recovered using current workspace binary executable profile target asset." -ForegroundColor Green
     } else {
         Write-Host "❌ CRITICAL ERROR: Could not retrieve provider application asset target." -ForegroundColor Red
+        Read-Host "Press Enter to exit"
         Exit
     }
 }
@@ -66,23 +76,20 @@ try {
 Write-Host "[5/5] Registering cluster worker background service layer..." -ForegroundColor Yellow
 $ServiceName = "StratusHardwareAgent"
 
+# Pure Windows internal service flush overrides
 & sc.exe stop $ServiceName > $null 2>&1
 & sc.exe delete $ServiceName > $null 2>&1
 Start-Sleep -Seconds 2
 
-try {
-    New-Service -Name $ServiceName `
-                -BinaryPathName "`"$BinaryPath`"" `
-                -DisplayName "StratusP2P Compute Daemon Worker Engine" `
-                -Description "Automates cluster sandbox compute isolation leasing structures." `
-                -StartupType Automatic | Out-Null
-                
-    Start-Service -Name $ServiceName
-    Write-Host "=================================================================" -ForegroundColor Green
-    Write-Host "🎯 SUCCESS: Your machine hardware is officially live on the grid!" -ForegroundColor Green
-    Write-Host "=================================================================" -ForegroundColor Green
-    Read-Host "Press Enter to finish installation"
-} catch {
-    Write-Host "❌ CRITICAL ERROR: Background service creation failed." -ForegroundColor Red
-    Read-Host "Press Enter to exit"
-}
+# Creating service mapping structures
+New-Service -Name $ServiceName `
+            -BinaryPathName "`"$BinaryPath`"" `
+            -DisplayName "StratusP2P Compute Daemon Worker Engine" `
+            -Description "Automates cluster sandbox compute isolation leasing structures." `
+            -StartupType Automatic | Out-Null
+            
+Start-Service -Name $ServiceName
+Write-Host "=================================================================" -ForegroundColor Green
+Write-Host "🎯 SUCCESS: Your machine hardware is officially live on the grid!" -ForegroundColor Green
+Write-Host "=================================================================" -ForegroundColor Green
+Read-Host "Press Enter to finish installation"

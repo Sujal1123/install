@@ -1,20 +1,18 @@
-# =================================================================
-# 🛡️ Core Administrator Auto-Elevation Hook
-# =================================================================
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    Write-Host "⚠️ Elevation required. Relaunching installer with Administrative Privileges..." -ForegroundColor Yellow
-    # Captures the original script parameter context string variables and runs a fresh elevated shell instance
-    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& { $MyInvocation.Line }`"" -Verb RunAs
-    Exit
-}
-
 param (
     [Parameter(Mandatory=$true)]
     [string]$Token,
     
-    [string]$OrchestratorUrl = "wss://stratus-p2p-core.onrender.com" # 🎯 Synchronized directly to your Render live backend
+    [string]$OrchestratorUrl = "wss://stratus-p2p-core.onrender.com"
 )
+
+# 🛡️ Core Administrator Auto-Elevation Hook (Moved below param)
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Write-Host "⚠️ Elevation required. Relaunching installer with Administrative Privileges..." -ForegroundColor Yellow
+    # Relaunches itself as Admin while cleanly passing the bound token parameter forward
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& { & ([scriptblock]::Create((irm https://raw.githubusercontent.com/Sujal1123/install/refs/heads/main/install.ps1))) -Token '$Token' -OrchestratorUrl '$OrchestratorUrl' }`"" -Verb RunAs
+    Exit
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -59,8 +57,6 @@ Write-Host "✅ Network routing configurations deployed successfully." -Foregrou
 # 4. Fetch the Compiled Client Agent Application Binary
 Write-Host "[4/5] Pulling down the latest secure network grid runner daemon..." -ForegroundColor Yellow
 $BinaryPath = Join-Path $InstallDir "provider.exe"
-
-# 🎯 Target download endpoint mapped cleanly to your profile release channel
 $DownloadUrl = "https://github.com/Sujal1123/install/releases/latest/download/provider.exe"
 
 try {
@@ -68,7 +64,6 @@ try {
     Write-Host "✅ Provider agent executable deployed safely onto local disk storage." -ForegroundColor Green
 } catch {
     Write-Host "⚠️ WARNING: Fast release mirror download failed. Defaulting to local workspace compilation tracking backup." -ForegroundColor Magenta
-    # Local fallback for your specific testing profile machine setup
     if (Test-Path ".\provider.exe") {
         Copy-Item -Path ".\provider.exe" -Destination $BinaryPath
         Write-Host "✅ Recovered using current workspace binary executable profile target asset." -ForegroundColor Green
@@ -82,13 +77,10 @@ try {
 Write-Host "[5/5] Registering cluster worker background service layer..." -ForegroundColor Yellow
 $ServiceName = "StratusHardwareAgent"
 
-# Check if an older running instance service configuration exists to tear it down cleanly first
-if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
-    Write-Host "Stopping existing agent infrastructure blocks..." -ForegroundColor Gray
-    Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
-    Remove-Service -Name $ServiceName -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 2
-}
+# Clean up older running instances via sc.exe (compatible with PowerShell 5.1)
+& sc.exe stop $ServiceName > $null 2>&1
+& sc.exe delete $ServiceName > $null 2>&1
+Start-Sleep -Seconds 2
 
 try {
     # Registers the binary to automatically execute silently hidden inside the background framework
@@ -104,6 +96,10 @@ try {
     Write-Host "🎯 SUCCESS: Your machine hardware is officially live on the grid!" -ForegroundColor Green
     Write-Host "System tray console terminals can be safely closed. Earning active." -ForegroundColor Green
     Write-Host "=================================================================" -ForegroundColor Green
+    
+    # Keeps the newly elevated window open so you can see the success banner
+    Read-Host "Press Enter to exit installer"
 } catch {
-    Write-Host "❌ CRITICAL ERROR: Background service creation failed. Ensure administrative privileges are bound." -ForegroundColor Red
+    Write-Host "❌ CRITICAL ERROR: Background service creation failed." -ForegroundColor Red
+    Read-Host "Press Enter to exit"
 }

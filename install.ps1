@@ -55,7 +55,7 @@ Write-Host "✅ Network routing configurations deployed successfully." -Foregrou
 # 4. Fetch the Compiled Client Agent Application Binary
 Write-Host "[4/5] Pulling down the latest secure network grid runner daemon..." -ForegroundColor Yellow
 $BinaryPath = Join-Path $InstallDir "provider.exe"
-$DownloadUrl = "https://github.com/Sujal1123/install/releases/latest/download/provider.exe"
+$DownloadUrl = "https://raw.githubusercontent.com/Sujal1123/install/main/provider.exe"
 
 try {
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $BinaryPath -UseBasicParsing

@@ -5,15 +5,6 @@ param (
     [string]$OrchestratorUrl = "wss://stratus-p2p-core.onrender.com"
 )
 
-# 🛡️ Core Administrator Auto-Elevation Hook (Moved below param)
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    Write-Host "⚠️ Elevation required. Relaunching installer with Administrative Privileges..." -ForegroundColor Yellow
-    # Relaunches itself as Admin while cleanly passing the bound token parameter forward
-    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& { & ([scriptblock]::Create((irm https://raw.githubusercontent.com/Sujal1123/install/refs/heads/main/install.ps1))) -Token '$Token' -OrchestratorUrl '$OrchestratorUrl' }`"" -Verb RunAs
-    Exit
-}
-
 $ErrorActionPreference = "Stop"
 
 Write-Host "=================================================================" -ForegroundColor Cyan
@@ -24,11 +15,9 @@ Write-Host "=================================================================" -
 Write-Host "[1/5] Validating local container environment dependencies..." -ForegroundColor Yellow
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Write-Host "❌ ERROR: Docker Engine / Docker Desktop was not found on this system." -ForegroundColor Red
-    Write-Host "Please download and install Docker Desktop from https://www.docker.com/products/docker-desktop/ before continuing." -ForegroundColor White
     Exit
 }
 
-# Ensure Docker daemon is actually up and running
 try {
     & docker info > $null
     Write-Host "✅ Docker engine is alive and verified responsive." -ForegroundColor Green
@@ -63,7 +52,7 @@ try {
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $BinaryPath -UseBasicParsing
     Write-Host "✅ Provider agent executable deployed safely onto local disk storage." -ForegroundColor Green
 } catch {
-    Write-Host "⚠️ WARNING: Fast release mirror download failed. Defaulting to local workspace compilation tracking backup." -ForegroundColor Magenta
+    Write-Host "⚠️ WARNING: Fast release mirror download failed. Checking local workspace..." -ForegroundColor Magenta
     if (Test-Path ".\provider.exe") {
         Copy-Item -Path ".\provider.exe" -Destination $BinaryPath
         Write-Host "✅ Recovered using current workspace binary executable profile target asset." -ForegroundColor Green
@@ -77,28 +66,22 @@ try {
 Write-Host "[5/5] Registering cluster worker background service layer..." -ForegroundColor Yellow
 $ServiceName = "StratusHardwareAgent"
 
-# Clean up older running instances via sc.exe (compatible with PowerShell 5.1)
 & sc.exe stop $ServiceName > $null 2>&1
 & sc.exe delete $ServiceName > $null 2>&1
 Start-Sleep -Seconds 2
 
 try {
-    # Registers the binary to automatically execute silently hidden inside the background framework
     New-Service -Name $ServiceName `
                 -BinaryPathName "`"$BinaryPath`"" `
                 -DisplayName "StratusP2P Compute Daemon Worker Engine" `
-                -Description "Automates cluster sandbox compute isolation leasing structures over the distributed grid network framework." `
+                -Description "Automates cluster sandbox compute isolation leasing structures." `
                 -StartupType Automatic | Out-Null
                 
-    # Fires up the system process service engine engine immediately
     Start-Service -Name $ServiceName
     Write-Host "=================================================================" -ForegroundColor Green
     Write-Host "🎯 SUCCESS: Your machine hardware is officially live on the grid!" -ForegroundColor Green
-    Write-Host "System tray console terminals can be safely closed. Earning active." -ForegroundColor Green
     Write-Host "=================================================================" -ForegroundColor Green
-    
-    # Keeps the newly elevated window open so you can see the success banner
-    Read-Host "Press Enter to exit installer"
+    Read-Host "Press Enter to finish installation"
 } catch {
     Write-Host "❌ CRITICAL ERROR: Background service creation failed." -ForegroundColor Red
     Read-Host "Press Enter to exit"

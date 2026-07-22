@@ -72,7 +72,7 @@ try {
     }
 }
 
-# 5. Register and Bind Executable as a Native Windows Scheduled Task
+# 5. Register and Bind Executable as a Native Windows Scheduled Task (User Session Scope)
 Write-Host "[5/5] Registering cluster worker background task layer..." -ForegroundColor Yellow
 $TaskName = "StratusHardwareAgent"
 
@@ -82,10 +82,13 @@ $TaskName = "StratusHardwareAgent"
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
 
-# Creating Scheduled Task execution structures running under SYSTEM with highest privileges
+# Capture logged-in user context to grant Docker Desktop pipe access
+$CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+
+# Create Scheduled Task tied to active user session
 $Action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c cd /d `"$InstallDir`" && provider.exe"
-$Trigger = New-ScheduledTaskTrigger -AtStartup
-$Principal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+$Trigger = New-ScheduledTaskTrigger -AtLogOn
+$Principal = New-ScheduledTaskPrincipal -UserId $CurrentUser -LogonType Interactive -RunLevel Highest
 
 Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Principal $Principal -Force | Out-Null
 Start-ScheduledTask -TaskName $TaskName

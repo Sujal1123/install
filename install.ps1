@@ -45,7 +45,7 @@ if (-not (Test-Path $InstallDir)) {
 # 3. Dynamically Generate config.json Layout Environment
 Write-Host "[3/5] Injecting cryptographic grid access tokens..." -ForegroundColor Yellow
 $ConfigObject = @{
-    CORE_ORCHESTRATOR_URL = $OrchestrUrl
+    CORE_ORCHESTRATOR_URL = $OrchestratorUrl
     ACCESS_TOKEN          = $Token
 }
 $ConfigPath = Join-Path $InstallDir "config.json"
@@ -72,23 +72,24 @@ try {
     }
 }
 
-# 5. Register and Bind Executable as a Native Windows System Service
-Write-Host "[5/5] Registering cluster worker background service layer..." -ForegroundColor Yellow
-$ServiceName = "StratusHardwareAgent"
+# 5. Register and Bind Executable as a Native Windows Scheduled Task
+Write-Host "[5/5] Registering cluster worker background task layer..." -ForegroundColor Yellow
+$TaskName = "StratusHardwareAgent"
 
-# Pure Windows internal service flush overrides
-& sc.exe stop $ServiceName > $null 2>&1
-& sc.exe delete $ServiceName > $null 2>&1
-Start-Sleep -Seconds 2
+# Pure Windows internal service & scheduled task cleanup overrides
+& sc.exe stop $TaskName > $null 2>&1
+& sc.exe delete $TaskName > $null 2>&1
+Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
 
-# Creating service mapping structures
-New-Service -Name $ServiceName `
-            -BinaryPathName "`"$BinaryPath`"" `
-            -DisplayName "StratusP2P Compute Daemon Worker Engine" `
-            -Description "Automates cluster sandbox compute isolation leasing structures." `
-            -StartupType Automatic | Out-Null
-            
-Start-Service -Name $ServiceName
+# Creating Scheduled Task execution structures running under SYSTEM with highest privileges
+$Action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c cd /d `"$InstallDir`" && provider.exe"
+$Trigger = New-ScheduledTaskTrigger -AtStartup
+$Principal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Principal $Principal -Force | Out-Null
+Start-ScheduledTask -TaskName $TaskName
+
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host "🎯 SUCCESS: Your machine hardware is officially live on the grid!" -ForegroundColor Green
 Write-Host "=================================================================" -ForegroundColor Green
